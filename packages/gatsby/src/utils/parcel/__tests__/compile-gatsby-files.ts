@@ -17,9 +17,11 @@ const dir = {
   tsOnlyInLocal: `${__dirname}/fixtures/ts-only-in-local-plugin`,
   misnamedJS: `${__dirname}/fixtures/misnamed-js`,
   misnamedTS: `${__dirname}/fixtures/misnamed-ts`,
+  gatsbyNodeAsDirectory: `${__dirname}/fixtures/gatsby-node-as-directory`,
+  errorInCode: `${__dirname}/fixtures/error-in-code-ts`,
 }
 
-jest.setTimeout(15000)
+jest.setTimeout(60_000)
 
 jest.mock(`@parcel/core`, () => {
   const parcelCore = jest.requireActual(`@parcel/core`)
@@ -67,7 +69,7 @@ describe(`gatsby file compilation`, () => {
     it(`should construct Parcel relative to passed directory`, () => {
       const { options } = constructParcel(dir.js) as IMockedParcel
 
-      expect(options).toMatchSnapshot({
+      expect(options).toMatchObject({
         entries: [
           `${dir.js}/${gatsbyFileRegex}`,
           `${dir.js}/plugins/**/${gatsbyFileRegex}`,
@@ -75,6 +77,9 @@ describe(`gatsby file compilation`, () => {
         targets: {
           root: {
             distDir: `${dir.js}/${COMPILED_CACHE_DIR}`,
+            engines: {
+              node: _CFLAGS_.GATSBY_MAJOR !== `5` ? `>= 14.15.0` : `>= 18.0.0`,
+            },
           },
         },
         cacheDir: `${dir.js}/${PARCEL_CACHE_DIR}`,
@@ -170,6 +175,61 @@ describe(`gatsby file compilation`, () => {
         expect(compiledGatsbyNode).toContain(`gatsby-node is working`)
       })
     })
+  })
+
+  it(`handles errors in TS code`, async () => {
+    process.chdir(dir.errorInCode)
+    await remove(`${dir.errorInCode}/.cache`)
+    await compileGatsbyFiles(dir.errorInCode)
+
+    expect(reporterPanicMock).toMatchInlineSnapshot(`
+      [MockFunction] {
+        "calls": Array [
+          Array [
+            Object {
+              "context": Object {
+                "filePath": "<PROJECT_ROOT>/gatsby-node.ts",
+                "generalMessage": "Expected ';', '}' or <eof>",
+                "hints": null,
+                "origin": "@parcel/transformer-js",
+                "specificMessage": "This is the expression part of an expression statement",
+              },
+              "id": "11901",
+            },
+          ],
+        ],
+        "results": Array [
+          Object {
+            "type": "return",
+            "value": undefined,
+          },
+        ],
+      }
+    `)
+  })
+})
+
+describe(`gatsby-node directory is allowed`, () => {
+  beforeAll(async () => {
+    process.chdir(dir.gatsbyNodeAsDirectory)
+    await remove(`${dir.gatsbyNodeAsDirectory}/.cache`)
+  })
+  beforeEach(() => {
+    reporterPanicMock.mockClear()
+  })
+  it(`should not panic on gatsby-node dir`, async () => {
+    await compileGatsbyFiles(dir.gatsbyNodeAsDirectory)
+    expect(reporterPanicMock).not.toHaveBeenCalled()
+  })
+
+  it(`should compile gatsby-node file and its dir files`, async () => {
+    const compiledGatsbyNode = await readFile(
+      `${dir.gatsbyNodeAsDirectory}/.cache/compiled/gatsby-node.js`,
+      `utf-8`
+    )
+
+    expect(compiledGatsbyNode).toContain(`I am working!`)
+    expect(reporterPanicMock).not.toHaveBeenCalled()
   })
 })
 

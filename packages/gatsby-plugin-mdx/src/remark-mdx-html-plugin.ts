@@ -1,10 +1,11 @@
-import type { Node } from "unist-util-visit"
-import type { Definition } from "mdast"
 import toHast from "mdast-util-to-hast"
-
 import { cachedImport } from "./cache-helpers"
 
-// This plugin replaces html nodes with JSX divs that render given HTML via dangerouslySetInnerHTML
+import type { Node } from "unist"
+import type { Definition, Literal } from "mdast"
+import type { MdxJsxAttribute, MdxJsxFlowElement } from "mdast-util-mdx"
+
+// This plugin replaces html nodes with JSX spans that render given HTML via dangerouslySetInnerHTML
 // We have to find out if this is really a good idea, but its processing footprint is very low
 // compared to other solutions that would traverse the given HTML.
 export const remarkMdxHtmlPlugin = () =>
@@ -26,16 +27,17 @@ export const remarkMdxHtmlPlugin = () =>
       }
     })
 
-    // Turn raw & html nodes into JSX divs with dangerouslySetInnerHTML
+    // Turn raw & html nodes into JSX spans with dangerouslySetInnerHTML
     // Required to support gatsby-remark-images & gatsby-remark-autolink-headers
     visit(markdownAST, node => {
       if (![`html`, `raw`].includes(node.type)) {
         return
       }
 
-      node.type = `mdxJsxFlowElement`
-      node.name = `div`
-      node.attributes = [
+      const typedNode = node as MdxJsxFlowElement
+      typedNode.type = `mdxJsxFlowElement`
+      typedNode.name = `span`
+      typedNode.attributes = [
         {
           type: `mdxJsxAttribute`,
           name: `dangerouslySetInnerHTML`,
@@ -61,7 +63,7 @@ export const remarkMdxHtmlPlugin = () =>
                           },
                           value: {
                             type: `Literal`,
-                            value: node.value,
+                            value: (node as Literal).value,
                           },
                           kind: `init`,
                         },
@@ -73,7 +75,7 @@ export const remarkMdxHtmlPlugin = () =>
               },
             },
           },
-        },
+        } as MdxJsxAttribute,
       ]
     })
 

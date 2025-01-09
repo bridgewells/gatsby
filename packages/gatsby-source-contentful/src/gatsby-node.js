@@ -43,7 +43,10 @@ const validateContentfulAccess = async pluginOptions => {
   return undefined
 }
 
-export const onPreInit = async ({ store, reporter }) => {
+export const onPreInit = async (
+  { store, reporter, actions },
+  pluginOptions
+) => {
   // if gatsby-plugin-image is not installed
   try {
     await import(`gatsby-plugin-image/graphql-utils`)
@@ -68,6 +71,12 @@ export const onPreInit = async ({ store, reporter }) => {
         sourceMessage: `gatsby-plugin-image is missing from your gatsby-config file.\nPlease add "gatsby-plugin-image" to your plugins array.`,
       },
     })
+  }
+
+  if (typeof actions?.addRemoteFileAllowedUrl === `function`) {
+    actions.addRemoteFileAllowedUrl(
+      `https://images.ctfassets.net/${pluginOptions.spaceId}/*`
+    )
   }
 }
 
@@ -108,6 +117,15 @@ You can pass in any other options available in the [contentful.js SDK](https://g
 For example, to filter locales on only germany \`localeFilter: locale => locale.code === 'de-DE'\`
 
 List of locales and their codes can be found in Contentful app -> Settings -> Locales`
+        )
+        .default(() => () => true),
+      typePrefix: Joi.string()
+        .description(`Prefix for Contentful node types`)
+        .default(`Contentful`),
+      contentTypeFilter: Joi.func()
+        .description(
+          `Possibility to limit how many contentType/nodes are created in GraphQL. This can limit the memory usage by reducing the amount of nodes created. Useful if you have a large space in Contentful and only want to get the data from certain content types.
+For example, to exclude content types starting with "page" \`contentTypeFilter: contentType => !contentType.sys.id.startsWith('page')\``
         )
         .default(() => () => true),
       pageLimit: Joi.number()

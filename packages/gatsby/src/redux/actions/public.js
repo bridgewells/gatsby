@@ -15,9 +15,9 @@ const {
 const { splitComponentPath } = require(`gatsby-core-utils/parse-component-path`)
 const { hasNodeChanged } = require(`../../utils/nodes`)
 const { getNode, getDataStore } = require(`../../datastore`)
-import sanitizeNode from "../../utils/sanitize-node"
+import { sanitizeNode } from "../../utils/sanitize-node"
 const { store } = require(`../index`)
-const { validatePageComponent } = require(`../../utils/validate-page-component`)
+const { validateComponent } = require(`../../utils/validate-component`)
 import { nodeSchema } from "../../joi-schemas/joi"
 const { generateComponentChunkName } = require(`../../utils/js-chunk-names`)
 const {
@@ -27,7 +27,6 @@ const {
 } = require(`../../utils/path`)
 const { applyTrailingSlashOption } = require(`gatsby-page-utils`)
 const apiRunnerNode = require(`../../utils/api-runner-node`)
-const { trackCli } = require(`gatsby-telemetry`)
 const { getNonGatsbyCodeFrame } = require(`../../utils/stack-trace-utils`)
 const { getPageMode } = require(`../../utils/page-mode`)
 const normalizePath = require(`../../utils/normalize-path`).default
@@ -91,12 +90,13 @@ type JobV2 = {
   args: Object,
 }
 
-type PageInput = {
-  path: string,
-  component: string,
-  context?: Object,
-  ownerNodeId?: string,
-  defer?: boolean,
+export interface IPageInput {
+  path: string;
+  component: string;
+  context?: Object;
+  ownerNodeId?: string;
+  defer?: boolean;
+  slices: Record<string, string>;
 }
 
 type PageMode = "SSG" | "DSG" | "SSR"
@@ -111,6 +111,7 @@ type Page = {
   updatedAt: number,
   ownerNodeId?: string,
   mode: PageMode,
+  slices: Record<string, string>,
 }
 
 type ActionOptions = {
@@ -136,7 +137,7 @@ type PageDataRemove = {
  * @example
  * deletePage(page)
  */
-actions.deletePage = (page: PageInput) => {
+actions.deletePage = (page: IPageInput) => {
   return {
     type: `DELETE_PAGE`,
     payload: page,
@@ -167,6 +168,7 @@ const reservedFields = [
  * @param {Object} page.context Context data for this page. Passed as props
  * to the component `this.props.pageContext` as well as to the graphql query
  * as graphql arguments.
+ * @param {Object} page.slices A mapping of alias-of-id for Slices rendered on this page. See the technical docs for the [Gatsby Slice API](/docs/reference/built-in-components/gatsby-slice).
  * @param {boolean} page.defer When set to `true`, Gatsby will exclude the page from the build step and instead generate it during the first HTTP request. Default value is `false`. Also see docs on [Deferred Static Generation](/docs/reference/rendering-options/deferred-static-generation/).
  * @example
  * createPage({
@@ -181,7 +183,7 @@ const reservedFields = [
  * })
  */
 actions.createPage = (
-  page: PageInput,
+  page: IPageInput,
   plugin?: Plugin,
   actionOptions?: ActionOptions
 ) => {
@@ -266,8 +268,8 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
       report.panic({
         id: `11322`,
         context: {
+          input: page,
           pluginName: name,
-          pageObject: page,
         },
       })
     } else {
@@ -281,13 +283,21 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
     page.component = pageComponentPath
   }
 
-  const { trailingSlash } = store.getState().config
-  const rootPath = store.getState().program.directory
-  const { error, message, panicOnBuild } = validatePageComponent(
-    page,
-    rootPath,
-    name
-  )
+  const { config, program } = store.getState()
+  const { trailingSlash } = config
+  const { directory } = program
+
+  const { error, panicOnBuild } = validateComponent({
+    input: page,
+    pluginName: name,
+    errorIdMap: {
+      noPath: `11322`,
+      notAbsolute: `11326`,
+      doesNotExist: `11325`,
+      empty: `11327`,
+      noDefaultExport: `11328`,
+    },
+  })
 
   if (error) {
     if (isNotTestEnv) {
@@ -297,7 +307,7 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
         report.panic(error)
       }
     }
-    return message
+    return `${name} must set the absolute path to the page component when creating a page`
   }
 
   // check if we've processed this component path
@@ -324,7 +334,7 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
         trueComponentPath = slash(trueCasePathSync(page.component))
       } catch (e) {
         // systems where user doesn't have access to /
-        const commonDir = getCommonDir(rootPath, page.component)
+        const commonDir = getCommonDir(directory, page.component)
 
         // using `path.win32` to force case insensitive relative path
         const relativePath = slash(
@@ -412,20 +422,19 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
     // Ensure the page has a context object
     context: page.context || {},
     updatedAt: Date.now(),
+    slices: page?.slices || {},
 
     // Link page to its plugin.
     pluginCreator___NODE: plugin.id ?? ``,
     pluginCreatorId: plugin.id ?? ``,
   }
 
-  if (_CFLAGS_.GATSBY_MAJOR === `4`) {
-    if (page.defer) {
-      internalPage.defer = true
-    }
-    // Note: mode is updated in the end of the build after we get access to all page components,
-    // see materializePageMode in utils/page-mode.ts
-    internalPage.mode = getPageMode(internalPage)
+  if (page.defer) {
+    internalPage.defer = true
   }
+  // Note: mode is updated in the end of the build after we get access to all page components,
+  // see materializePageMode in utils/page-mode.ts
+  internalPage.mode = getPageMode(internalPage)
 
   if (page.ownerNodeId) {
     internalPage.ownerNodeId = page.ownerNodeId
@@ -441,6 +450,8 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
     !!oldPage && !_.isEqual(oldPage.context, internalPage.context)
   const componentModified =
     !!oldPage && !_.isEqual(oldPage.component, internalPage.component)
+  const slicesModified =
+    !!oldPage && !_.isEqual(oldPage.slices, internalPage.slices)
 
   const alternateSlashPath = page.path.endsWith(`/`)
     ? page.path.slice(0, -1)
@@ -468,11 +479,13 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
 
   let deleteActions
   let updateNodeAction
+  // marking internal-data-bridge as owner of SitePage instead of plugin that calls createPage
   if (oldNode && !hasNodeChanged(node.id, node.internal.contentDigest)) {
     updateNodeAction = {
       ...actionOptions,
-      plugin,
+      plugin: { name: `internal-data-bridge` },
       type: `TOUCH_NODE`,
+      typeName: node.internal.type,
       payload: node.id,
     }
   } else {
@@ -483,8 +496,9 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
         return {
           ...actionOptions,
           type: `DELETE_NODE`,
-          plugin,
+          plugin: { name: `internal-data-bridge` },
           payload: node,
+          isRecursiveChildrenDelete: true,
         }
       }
       deleteActions = findChildren(oldNode.children)
@@ -497,7 +511,7 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
     updateNodeAction = {
       ...actionOptions,
       type: `CREATE_NODE`,
-      plugin,
+      plugin: { name: `internal-data-bridge` },
       oldNode,
       payload: node,
     }
@@ -512,6 +526,7 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
       type: `CREATE_PAGE`,
       contextModified,
       componentModified,
+      slicesModified,
       plugin,
       payload: sanitizedPayload,
     },
@@ -526,8 +541,6 @@ ${reservedFields.map(f => `  * "${f}"`).join(`\n`)}
   return actions
 }
 
-const deleteNodeDeprecationWarningDisplayedMessages = new Set()
-
 /**
  * Delete a node
  * @param {object} node A node object. See the "createNode" action for more information about the node object details.
@@ -540,36 +553,15 @@ actions.deleteNode = (node: any, plugin?: Plugin) => {
   // Always get node from the store, as the node we get as an arg
   // might already have been deleted.
   const internalNode = getNode(id)
-  if (plugin) {
-    const pluginName = plugin.name
-
-    if (
-      internalNode &&
-      typeOwners[internalNode.internal.type] &&
-      typeOwners[internalNode.internal.type] !== pluginName
-    )
-      throw new Error(stripIndent`
-          The plugin "${pluginName}" deleted a node of a type owned by another plugin.
-
-          The node type "${internalNode.internal.type}" is owned by "${
-        typeOwners[internalNode.internal.type]
-      }".
-
-          The node object passed to "deleteNode":
-
-          ${JSON.stringify(internalNode, null, 4)}
-
-          The plugin deleting the node:
-
-          ${JSON.stringify(plugin, null, 4)}
-        `)
-  }
 
   const createDeleteAction = node => {
     return {
       type: `DELETE_NODE`,
       plugin,
       payload: node,
+      // main node need to be owned by plugin that calls deleteNode
+      // child nodes should skip ownership check
+      isRecursiveChildrenDelete: node !== internalNode,
     }
   }
 
@@ -599,8 +591,6 @@ function getNextNodeCounter() {
   }
   return lastNodeCounter + 1
 }
-
-const typeOwners = {}
 
 // memberof notation is added so this code can be referenced instead of the wrapper.
 /**
@@ -654,6 +644,10 @@ const typeOwners = {}
  * readable description of what this node represent / its source. It will
  * be displayed when type conflicts are found, making it easier to find
  * and correct type conflicts.
+ * @param {string} node.internal.contentFilePath An optional field. A plugin
+ * can add an absolute path to a content file (e.g. markdown file) here
+ * while creating the node. Example: gatsby-plugin-mdx adds the absolute path
+ * of the `File` node to the `Mdx` node under `internal.contentFilePath`.
  * @returns {Promise} The returned Promise resolves when all cascading
  * `onCreateNode` API calls triggered by `createNode` have finished.
  * @example
@@ -725,8 +719,6 @@ const createNode = (
     trackParams[`pluginName`] = `${plugin.name}@${plugin.version}`
   }
 
-  trackCli(`CREATE_NODE`, trackParams, { debounce: true })
-
   const result = nodeSchema.validate(node)
   if (result.error) {
     if (!hasErroredBecauseOfNodeValidation.has(result.error.message)) {
@@ -782,47 +774,6 @@ const createNode = (
 
   const oldNode = getNode(node.id)
 
-  // Ensure the plugin isn't creating a node type owned by another
-  // plugin. Type "ownership" is first come first served.
-  if (plugin) {
-    const pluginName = plugin.name
-
-    if (!typeOwners[node.internal.type])
-      typeOwners[node.internal.type] = pluginName
-    else if (typeOwners[node.internal.type] !== pluginName)
-      throw new Error(stripIndent`
-        The plugin "${pluginName}" created a node of a type owned by another plugin.
-
-        The node type "${node.internal.type}" is owned by "${
-        typeOwners[node.internal.type]
-      }".
-
-        If you copy and pasted code from elsewhere, you'll need to pick a new type name
-        for your new node(s).
-
-        The node object passed to "createNode":
-
-        ${JSON.stringify(node, null, 4)}
-
-        The plugin creating the node:
-
-        ${JSON.stringify(plugin, null, 4)}
-      `)
-
-    // If the node has been created in the past, check that
-    // the current plugin is the same as the previous.
-    if (oldNode && oldNode.internal.owner !== pluginName) {
-      throw new Error(
-        stripIndent`
-        Nodes can only be updated by their owner. Node "${node.id}" is
-        owned by "${oldNode.internal.owner}" and another plugin "${pluginName}"
-        tried to update it.
-
-        `
-      )
-    }
-  }
-
   if (actionOptions.parentSpan) {
     actionOptions.parentSpan.setTag(`nodeId`, node.id)
     actionOptions.parentSpan.setTag(`nodeType`, node.id)
@@ -837,6 +788,7 @@ const createNode = (
       plugin,
       type: `TOUCH_NODE`,
       payload: node.id,
+      typeName: node.internal.type,
     }
   } else {
     // Remove any previously created descendant nodes as they're all due
@@ -848,6 +800,7 @@ const createNode = (
           type: `DELETE_NODE`,
           plugin,
           payload: node,
+          isRecursiveChildrenDelete: true,
         }
       }
       deleteActions = findChildren(oldNode.children)
@@ -908,8 +861,6 @@ actions.createNode =
     }
   }
 
-const touchNodeDeprecationWarningDisplayedMessages = new Set()
-
 /**
  * "Touch" a node. Tells Gatsby a node still exists and shouldn't
  * be garbage collected. Primarily useful for source plugins fetching
@@ -921,10 +872,6 @@ const touchNodeDeprecationWarningDisplayedMessages = new Set()
  * touchNode(node)
  */
 actions.touchNode = (node: any, plugin?: Plugin) => {
-  if (node && !typeOwners[node.internal.type]) {
-    typeOwners[node.internal.type] = node.internal.owner
-  }
-
   const nodeId = node?.id
 
   if (!nodeId) {
@@ -936,6 +883,7 @@ actions.touchNode = (node: any, plugin?: Plugin) => {
     type: `TOUCH_NODE`,
     plugin,
     payload: nodeId,
+    typeName: node.internal.type,
   }
 }
 
@@ -1355,14 +1303,13 @@ const maybeAddPathPrefix = (path, pathPrefix) => {
 }
 
 /**
- * Create a redirect from one page to another. Redirects work out of the box with Gatsby Cloud. Read more about
- * [working with redirects on Gatsby Cloud](https://support.gatsbyjs.com/hc/en-us/articles/1500003051241-Working-with-Redirects).
- * If you are hosting somewhere other than Gatsby Cloud, you will need a plugin to integrate the redirect data with
- * your hosting technology e.g. the [Netlify
- * plugin](/plugins/gatsby-plugin-netlify/), or the [Amazon S3
- * plugin](/plugins/gatsby-plugin-s3/). Alternatively, you can use
- * [this plugin](/plugins/gatsby-plugin-meta-redirect/) to generate meta redirect
- * html files for redirecting on any static file host.
+ * Create a redirect from one page to another.
+ *
+ * Redirects must be implemented by your deployment platform (e.g. Gatsby Cloud, Netlify, etc.). You can use an [adapter](/docs/how-to/previews-deploys-hosting/adapters/) or plugins for this. Alternatively, you can use [gatsby-plugin-meta-redirect](/plugins/gatsby-plugin-meta-redirect/) to generate meta redirect HTML files for redirecting on any static file host.
+ *
+ * You can read the source code of [gatsby-adapter-netlify](https://github.com/gatsbyjs/gatsby/tree/master/packages/gatsby-adapter-netlify) to see how redirects are implemented on Netlify. Redirects also work out of the box on Gatsby Cloud.
+ *
+ * Keep the redirects configuration in sync with trailing slash configuration from [Gatsby Config API](/docs/reference/config-files/gatsby-config/#trailingslash).
  *
  * @param {Object} redirect Redirect data
  * @param {string} redirect.fromPath Any valid URL. Must start with a forward slash
@@ -1379,12 +1326,14 @@ const maybeAddPathPrefix = (path, pathPrefix) => {
  * // Generally you create redirects while creating pages.
  * exports.createPages = ({ graphql, actions }) => {
  *   const { createRedirect } = actions
- *   createRedirect({ fromPath: '/old-url', toPath: '/new-url', isPermanent: true })
- *   createRedirect({ fromPath: '/url', toPath: '/zn-CH/url', conditions: { language: 'zn' }})
- *   createRedirect({ fromPath: '/url', toPath: '/en/url', conditions: { language: ['ca', 'us'] }})
- *   createRedirect({ fromPath: '/url', toPath: '/ca/url', conditions: { country: 'ca' }})
- *   createRedirect({ fromPath: '/url', toPath: '/en/url', conditions: { country: ['ca', 'us'] }})
- *   createRedirect({ fromPath: '/not_so-pretty_url', toPath: '/pretty/url', statusCode: 200 })
+ *
+ *   createRedirect({ fromPath: '/old-url/', toPath: '/new-url/', isPermanent: true })
+ *   createRedirect({ fromPath: '/url/', toPath: '/zn-CH/url/', conditions: { language: 'zn' }})
+ *   createRedirect({ fromPath: '/url/', toPath: '/en/url/', conditions: { language: ['ca', 'us'] }})
+ *   createRedirect({ fromPath: '/url/', toPath: '/ca/url/', conditions: { country: 'ca' }})
+ *   createRedirect({ fromPath: '/url/', toPath: '/en/url/', conditions: { country: ['ca', 'us'] }})
+ *   createRedirect({ fromPath: '/not_so-pretty_url/', toPath: '/pretty/url/', statusCode: 200 })
+ *
  *   // Create pages here
  * }
  */
@@ -1495,6 +1444,31 @@ actions.unstable_createNodeManifest = (
       pluginName: plugin.name,
       updatedAtUTC,
     },
+  }
+}
+
+/**
+ * Marks a source plugin as "stateful" which disables automatically deleting untouched nodes. Stateful source plugins manage deleting their own nodes without stale node checks in Gatsby.
+ * Enabling this is a major performance improvement for source plugins that manage their own node deletion. It also lowers the total memory required by a source plugin.
+ * When using this action, check if it's supported first with `hasFeature('stateful-source-nodes')`, `hasFeature` is exported from `gatsby-plugin-utils`.
+ *
+ * @example
+ * import { hasFeature } from "gatsby-plugin-utils"
+ *
+ * exports.sourceNodes = ({ actions }) => {
+ *    if (hasFeature(`stateful-source-nodes`)) {
+ *      actions.enableStatefulSourceNodes()
+ *    } else {
+ *     // fallback to old behavior where all nodes are iterated on and touchNode is called.
+ *    }
+ * }
+ *
+ * @param {void} $0
+ */
+actions.enableStatefulSourceNodes = (plugin: Plugin) => {
+  return {
+    type: `ENABLE_STATEFUL_SOURCE_PLUGIN`,
+    plugin,
   }
 }
 

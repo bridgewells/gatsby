@@ -1,4 +1,5 @@
 import { slash } from "gatsby-core-utils"
+import { uniqWith, isEqual } from "lodash"
 import path from "path"
 import reporter from "gatsby-cli/lib/reporter"
 import { store } from "../../redux"
@@ -76,7 +77,6 @@ export function loadInternalPlugins(
   })
 
   if (
-    _CFLAGS_.GATSBY_MAJOR === `4` &&
     configuredPluginNames.has(GATSBY_CLOUD_PLUGIN_NAME) &&
     incompatibleGatsbyCloudPlugin(plugins)
   ) {
@@ -171,5 +171,7 @@ export function loadInternalPlugins(
     )
   )
 
-  return plugins
+  const uniquePlugins = uniqWith(plugins, isEqual)
+
+  return uniquePlugins
 }
