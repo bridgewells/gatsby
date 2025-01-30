@@ -108,13 +108,13 @@ describe(`gatsby config`, () => {
     )
   })
 
-  it(`returns "legacy" for trailingSlash when not set`, () => {
+  it(`returns "always" for trailingSlash when not set`, () => {
     const config = {}
 
     const result = gatsbyConfigSchema.validate(config)
     expect(result.value).toEqual(
       expect.objectContaining({
-        trailingSlash: `legacy`,
+        trailingSlash: `always`,
       })
     )
   })
@@ -126,7 +126,7 @@ describe(`gatsby config`, () => {
 
     const result = gatsbyConfigSchema.validate(config)
     expect(result.error).toMatchInlineSnapshot(
-      `[ValidationError: "trailingSlash" must be one of [always, never, ignore, legacy]]`
+      `[ValidationError: "trailingSlash" must be one of [always, never, ignore]]`
     )
   })
 
@@ -137,7 +137,7 @@ describe(`gatsby config`, () => {
 
     const result = gatsbyConfigSchema.validate(config)
     expect(result.error).toMatchInlineSnapshot(
-      `[ValidationError: "trailingSlash" must be one of [always, never, ignore, legacy]]`
+      `[ValidationError: "trailingSlash" must be one of [always, never, ignore]]`
     )
   })
 
@@ -186,6 +186,10 @@ describe(`gatsby config`, () => {
       expect.objectContaining({
         graphqlTypegen: {
           typesOutputPath: `src/gatsby-types.d.ts`,
+          documentSearchPaths: [
+            `./gatsby-node.ts`,
+            `./plugins/**/gatsby-node.ts`,
+          ],
           generateOnBuild: false,
         },
       })
@@ -202,6 +206,10 @@ describe(`gatsby config`, () => {
       expect.objectContaining({
         graphqlTypegen: {
           typesOutputPath: `src/gatsby-types.d.ts`,
+          documentSearchPaths: [
+            `./gatsby-node.ts`,
+            `./plugins/**/gatsby-node.ts`,
+          ],
           generateOnBuild: false,
         },
       })
@@ -212,6 +220,11 @@ describe(`gatsby config`, () => {
     const config = {
       graphqlTypegen: {
         typesOutputPath: `gatsby-types.d.ts`,
+        documentSearchPaths: [
+          `./gatsby-node.ts`,
+          `./plugins/**/gatsby-node.ts`,
+          `./src/gatsby/generatePage.ts`,
+        ],
       },
     }
 
@@ -220,6 +233,11 @@ describe(`gatsby config`, () => {
       expect.objectContaining({
         graphqlTypegen: {
           typesOutputPath: `gatsby-types.d.ts`,
+          documentSearchPaths: [
+            `./gatsby-node.ts`,
+            `./plugins/**/gatsby-node.ts`,
+            `./src/gatsby/generatePage.ts`,
+          ],
           generateOnBuild: false,
         },
       })
@@ -238,9 +256,113 @@ describe(`gatsby config`, () => {
       expect.objectContaining({
         graphqlTypegen: {
           typesOutputPath: `src/gatsby-types.d.ts`,
+          documentSearchPaths: [
+            `./gatsby-node.ts`,
+            `./plugins/**/gatsby-node.ts`,
+          ],
           generateOnBuild: true,
         },
       })
+    )
+  })
+
+  it(`returns empty array when headers are not set`, () => {
+    const config = {}
+
+    const result = gatsbyConfigSchema.validate(config)
+    expect(result.value?.headers).toEqual([])
+  })
+
+  it(`lets you create custom HTTP headers for a path`, () => {
+    const config = {
+      headers: [
+        {
+          source: `*`,
+          headers: [
+            {
+              key: `x-custom-header`,
+              value: `some value`,
+            },
+          ],
+        },
+      ],
+    }
+
+    const result = gatsbyConfigSchema.validate(config)
+    expect(result.value?.headers).toEqual(config.headers)
+  })
+
+  it(`throws on incorrect headers definitions`, () => {
+    const configOne = {
+      headers: {
+        source: `*`,
+        headers: [
+          {
+            key: `x-custom-header`,
+            value: `some value`,
+          },
+        ],
+      },
+    }
+
+    const resultOne = gatsbyConfigSchema.validate(configOne)
+    expect(resultOne.error).toMatchInlineSnapshot(
+      `[ValidationError: "headers" must be an array]`
+    )
+
+    const configTwo = {
+      headers: [
+        {
+          source: `*`,
+          headers: {
+            key: `x-custom-header`,
+            value: `some value`,
+          },
+        },
+      ],
+    }
+
+    const resultTwo = gatsbyConfigSchema.validate(configTwo)
+    expect(resultTwo.error).toMatchInlineSnapshot(
+      `[ValidationError: "headers[0].headers" must be an array]`
+    )
+  })
+
+  it(`lets you add an adapter`, () => {
+    const config = {
+      adapter: {
+        name: `gatsby-adapter-name`,
+        cache: {
+          restore: (): Promise<void> => Promise.resolve(),
+          store: (): Promise<void> => Promise.resolve(),
+        },
+        adapt: (): Promise<void> => Promise.resolve(),
+      },
+    }
+
+    const result = gatsbyConfigSchema.validate(config)
+    expect(result.value?.adapter).toEqual(config.adapter)
+  })
+
+  it(`throws on incorrect adapter setting`, () => {
+    const configOne = {
+      adapter: `gatsby-adapter-name`,
+    }
+
+    const resultOne = gatsbyConfigSchema.validate(configOne)
+    expect(resultOne.error).toMatchInlineSnapshot(
+      `[ValidationError: "adapter" must be of type object]`
+    )
+
+    const configTwo = {
+      adapter: {
+        name: `gatsby-adapter-name`,
+      },
+    }
+
+    const resultTwo = gatsbyConfigSchema.validate(configTwo)
+    expect(resultTwo.error).toMatchInlineSnapshot(
+      `[ValidationError: "adapter.adapt" is required]`
     )
   })
 })

@@ -4,15 +4,40 @@ import reporter from "gatsby-cli/lib/reporter"
 import { IFlattenedPlugin } from "../types"
 import { silent as resolveFrom } from "resolve-from"
 
+const mockNonIncompatibleWarn = jest.fn()
+
 jest.mock(`gatsby-cli/lib/reporter`, () => {
   return {
     error: jest.fn(),
     panic: jest.fn(),
     panicOnBuild: jest.fn(),
     log: jest.fn(),
-    warn: jest.fn(),
+    warn: jest.fn((...args) => {
+      // filter out compatible warnings as we get a lot of
+      // Plugin X is not compatible with your gatsby version X - It requires X
+      // right now
+      if (!args[0].includes(`is not compatible with your gatsby version`)) {
+        mockNonIncompatibleWarn(...args)
+      }
+    }),
     success: jest.fn(),
     info: jest.fn(),
+  }
+})
+
+// Previously babel transpiled src ts plugin files (e.g. gatsby-node files) on the fly,
+// making them require-able/test-able without running compileGatsbyFiles prior (as would happen in a real scenario).
+// After switching to import to support esm, point file path resolution to the real compiled JS files in dist instead.
+jest.mock(`../../resolve-js-file-path`, () => {
+  return {
+    resolveJSFilepath: jest.fn(({ filePath }: { filePath: string }) => {
+      if (filePath.includes(`load-plugins/__tests__/fixtures`)) {
+        return filePath
+      }
+
+      return `${filePath.replace(`src`, `dist`)}.js`
+    }),
+    maybeAddFileProtocol: jest.fn(val => val),
   }
 })
 
@@ -197,9 +222,7 @@ describe(`Load plugins`, () => {
         (plugin: { name: string }) => plugin.name === `gatsby-plugin-typescript`
       )
 
-      // TODO: I think we should probably be de-duping, so this should be 1.
-      // But this test is mostly here to ensure we don't add an _additional_ gatsby-plugin-typescript
-      expect(tsplugins.length).toEqual(2)
+      expect(tsplugins.length).toEqual(1)
     })
   })
 
@@ -330,9 +353,7 @@ describe(`Load plugins`, () => {
           plugin.name === `gatsby-plugin-gatsby-cloud`
       )
 
-      // TODO: I think we should probably be de-duping, so this should be 1.
-      // But this test is mostly here to ensure we don't add an _additional_ gatsby-plugin-typescript
-      expect(cloudPlugins.length).toEqual(2)
+      expect(cloudPlugins.length).toEqual(1)
     })
   })
 
@@ -459,8 +480,9 @@ describe(`Load plugins`, () => {
       )
 
       expect(reporter.error as jest.Mock).toHaveBeenCalledTimes(0)
-      expect(reporter.warn as jest.Mock).toHaveBeenCalledTimes(1)
-      expect((reporter.warn as jest.Mock).mock.calls[0]).toMatchInlineSnapshot(`
+      expect(mockNonIncompatibleWarn as jest.Mock).toHaveBeenCalledTimes(1)
+      expect((mockNonIncompatibleWarn as jest.Mock).mock.calls[0])
+        .toMatchInlineSnapshot(`
         Array [
           "Warning: there are unknown plugin options for \\"gatsby-plugin-google-analytics\\": doesThisExistInTheSchema
         Please open an issue at https://ghub.io/gatsby-plugin-google-analytics if you believe this option is valid.",
@@ -510,6 +532,58 @@ describe(`Load plugins`, () => {
               resolve: `gatsby-transformer-remark`,
               options: {
                 plugins: [
+                  {
+                    resolve: `gatsby-remark-autolink-headers`,
+                    options: {
+                      maintainCase: `should be boolean`,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        process.cwd()
+      )
+
+      expect(reporter.error as jest.Mock).toHaveBeenCalledTimes(1)
+      expect((reporter.error as jest.Mock).mock.calls[0])
+        .toMatchInlineSnapshot(`
+        Array [
+          Object {
+            "context": Object {
+              "configDir": null,
+              "pluginName": "gatsby-remark-autolink-headers",
+              "validationErrors": Array [
+                Object {
+                  "context": Object {
+                    "key": "maintainCase",
+                    "label": "maintainCase",
+                    "value": "should be boolean",
+                  },
+                  "message": "\\"maintainCase\\" must be a boolean",
+                  "path": Array [
+                    "maintainCase",
+                  ],
+                  "type": "boolean.base",
+                },
+              ],
+            },
+            "id": "11331",
+          },
+        ]
+      `)
+      expect(mockProcessExit).toHaveBeenCalledWith(1)
+    })
+
+    it(`validates subplugin schemas (if not in options.plugins)`, async () => {
+      await loadPlugins(
+        {
+          plugins: [
+            {
+              resolve: `gatsby-plugin-mdx`,
+              options: {
+                gatsbyRemarkPlugins: [
                   {
                     resolve: `gatsby-remark-autolink-headers`,
                     options: {

@@ -3,6 +3,184 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [5.14.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.14.0/packages/gatsby-plugin-gatsby-cloud) (2024-11-06)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.14)
+
+#### Bug Fixes
+
+- update dependency fs-extra to ^11.2.0 [#38727](https://github.com/gatsbyjs/gatsby/issues/38727) ([cb33fe5](https://github.com/gatsbyjs/gatsby/commit/cb33fe5d02b3a42cf629baf948a7aae7a9e7dd0f))
+
+#### Chores
+
+- disable telemetry [#39137](https://github.com/gatsbyjs/gatsby/issues/39137) ([1b1720b](https://github.com/gatsbyjs/gatsby/commit/1b1720bb75233661b30205000c4c3bff855d47c8))
+
+### [5.13.1](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.13.1/packages/gatsby-plugin-gatsby-cloud) (2024-01-23)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.13.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.13.0/packages/gatsby-plugin-gatsby-cloud) (2023-12-18)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.13)
+
+#### Other Changes
+
+- Update gatsby-cloud-plugin README [#38479](https://github.com/gatsbyjs/gatsby/issues/38479) ([743cb95](https://github.com/gatsbyjs/gatsby/commit/743cb95f0a5d86d705881eac986c188cc5bc48b6))
+
+### [5.12.2](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.12.2/packages/gatsby-plugin-gatsby-cloud) (2023-10-26)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+### [5.12.1](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.12.1/packages/gatsby-plugin-gatsby-cloud) (2023-09-15)
+
+#### Other Changes
+
+- Update gatsby-cloud-plugin README [#38479](https://github.com/gatsbyjs/gatsby/issues/38479) [#38550](https://github.com/gatsbyjs/gatsby/issues/38550) ([dfcc546](https://github.com/gatsbyjs/gatsby/commit/dfcc546ad3cdf8769925b7d3407c4be68158ca64))
+
+## [5.12.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.12.0/packages/gatsby-plugin-gatsby-cloud) (2023-08-24)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.12)
+
+#### Chores
+
+- update dependency msw to ^1.2.2 for gatsby-plugin-gatsby-cloud [#38284](https://github.com/gatsbyjs/gatsby/issues/38284) ([edbbce5](https://github.com/gatsbyjs/gatsby/commit/edbbce5d159ab51d7af76fcbec5b79e412c41227))
+
+## [5.11.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.11.0/packages/gatsby-plugin-gatsby-cloud) (2023-06-15)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.11)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.10.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.10.0/packages/gatsby-plugin-gatsby-cloud) (2023-05-16)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.10)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.9.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.9.0/packages/gatsby-plugin-gatsby-cloud) (2023-04-18)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.9)
+
+#### Bug Fixes
+
+- update dependency fs-extra to ^11.1.1 [#37827](https://github.com/gatsbyjs/gatsby/issues/37827) ([3e9a590](https://github.com/gatsbyjs/gatsby/commit/3e9a590fdc0b4cdbc763b6a6e3ca3e983ac8231a))
+
+#### Chores
+
+- update [dev] major dependencies for gatsby-plugin-gatsby-cloud (major) [#37882](https://github.com/gatsbyjs/gatsby/issues/37882) ([12778ee](https://github.com/gatsbyjs/gatsby/commit/12778ee1ec878354cdaf4fb25f3e5add97655988))
+- update dependency node-fetch to ^2.6.9 for gatsby-plugin-gatsby-cloud [#37821](https://github.com/gatsbyjs/gatsby/issues/37821) ([f645e9e](https://github.com/gatsbyjs/gatsby/commit/f645e9e3a0f209309e113d180ecb633eec6735bd))
+
+## [5.8.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.8.0/packages/gatsby-plugin-gatsby-cloud) (2023-03-21)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.8)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.7.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.7.0/packages/gatsby-plugin-gatsby-cloud) (2023-02-21)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.7)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.6.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.6.0/packages/gatsby-plugin-gatsby-cloud) (2023-02-07)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.6)
+
+#### Bug Fixes
+
+- update babel monorepo [#37568](https://github.com/gatsbyjs/gatsby/issues/37568) ([13a0a9e](https://github.com/gatsbyjs/gatsby/commit/13a0a9e83dcb015b65dff6b73cdd5dea09c2988f))
+
+#### Chores
+
+- update [dev] minor and patch dependencies for gatsby-plugin-gatsby-cloud [#37560](https://github.com/gatsbyjs/gatsby/issues/37560) ([4600dd3](https://github.com/gatsbyjs/gatsby/commit/4600dd3416fe20e0083e138b574f38afc619e418))
+
+## [5.5.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.5.0/packages/gatsby-plugin-gatsby-cloud) (2023-01-24)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.5)
+
+#### Chores
+
+- Upgrade some non-breaking major versions [#37406](https://github.com/gatsbyjs/gatsby/issues/37406) ([2ea80c0](https://github.com/gatsbyjs/gatsby/commit/2ea80c02e464fe9306f6a1eccbb6c74983a76208))
+
+## [5.4.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.4.0/packages/gatsby-plugin-gatsby-cloud) (2023-01-10)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.4)
+
+#### Chores
+
+- update babel monorepo [#37386](https://github.com/gatsbyjs/gatsby/issues/37386) ([b941876](https://github.com/gatsbyjs/gatsby/commit/b94187633d94d0f0071b38ffe93380dd802ec70f))
+- update [dev] minor and patch dependencies for gatsby-plugin-gatsby-cloud [#37385](https://github.com/gatsbyjs/gatsby/issues/37385) ([594886b](https://github.com/gatsbyjs/gatsby/commit/594886b23f11d19350eccc0f1e7d55abf9563780))
+- Update README [#37243](https://github.com/gatsbyjs/gatsby/issues/37243) ([33bc518](https://github.com/gatsbyjs/gatsby/commit/33bc518f7321243240d7c2156b9d1e10e7fbc027))
+
+### [5.3.1](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.3.1/packages/gatsby-plugin-gatsby-cloud) (2022-12-14)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.3.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.3.0/packages/gatsby-plugin-gatsby-cloud) (2022-12-13)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.3)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.2.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.2.0/packages/gatsby-plugin-gatsby-cloud) (2022-11-25)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.2)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.1.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.1.0/packages/gatsby-plugin-gatsby-cloud) (2022-11-22)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.1)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [5.0.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@5.0.0/packages/gatsby-plugin-gatsby-cloud) (2022-11-08)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v5.0)
+
+#### Features
+
+- add total page count ipc [#36668](https://github.com/gatsbyjs/gatsby/issues/36668) ([3ba9b63](https://github.com/gatsbyjs/gatsby/commit/3ba9b63405a2b46db985ef5c245a1d11fd7c1edb))
+
+#### Bug Fixes
+
+- Re-add constant LINK_REGEX [#36839](https://github.com/gatsbyjs/gatsby/issues/36839) ([7dd02a9](https://github.com/gatsbyjs/gatsby/commit/7dd02a98a1a4ec2600d1bf42b0dff89abf963320))
+
+#### Chores
+
+- Update peerDeps [#36965](https://github.com/gatsbyjs/gatsby/issues/36965) ([b624442](https://github.com/gatsbyjs/gatsby/commit/b6244424fe8b724cbc23b80b2b4f5424cc2055a4))
+- apply patches for v5 [#36796](https://github.com/gatsbyjs/gatsby/issues/36796) ([25f79b6](https://github.com/gatsbyjs/gatsby/commit/25f79b6c3719fdf09584ade620a05c66ba2a697c))
+
+### [4.24.1](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@4.24.1/packages/gatsby-plugin-gatsby-cloud) (2022-10-19)
+
+#### Bug Fixes
+
+- Re-add constant LINK_REGEX [#36839](https://github.com/gatsbyjs/gatsby/issues/36839) [#36847](https://github.com/gatsbyjs/gatsby/issues/36847) ([d211a97](https://github.com/gatsbyjs/gatsby/commit/d211a972d3d761e3cc4f725458fcd2216b61e4c7))
+
+## [4.24.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@4.24.0/packages/gatsby-plugin-gatsby-cloud) (2022-09-27)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v4.24)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+### [4.23.1](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@4.23.1/packages/gatsby-plugin-gatsby-cloud) (2022-09-23)
+
+#### Features
+
+- add total page count ipc [#36668](https://github.com/gatsbyjs/gatsby/issues/36668) [#36679](https://github.com/gatsbyjs/gatsby/issues/36679) ([629a2f6](https://github.com/gatsbyjs/gatsby/commit/629a2f6154e035ed6ab6b01dd5fb78775cb921a1))
+
+## [4.23.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@4.23.0/packages/gatsby-plugin-gatsby-cloud) (2022-09-13)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v4.23)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
+## [4.22.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@4.22.0/packages/gatsby-plugin-gatsby-cloud) (2022-08-30)
+
+[🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v4.22)
+
+**Note:** Version bump only for package gatsby-plugin-gatsby-cloud
+
 ## [4.21.0](https://github.com/gatsbyjs/gatsby/commits/gatsby-plugin-gatsby-cloud@4.21.0/packages/gatsby-plugin-gatsby-cloud) (2022-08-16)
 
 [🧾 Release notes](https://www.gatsbyjs.com/docs/reference/release-notes/v4.21)

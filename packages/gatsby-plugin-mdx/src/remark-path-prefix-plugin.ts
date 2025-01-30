@@ -1,4 +1,4 @@
-import type { Node } from "unist-util-visit"
+import type { Node } from "unist"
 import { cachedImport } from "./cache-helpers"
 
 // ensure only one `/` in new url
@@ -15,14 +15,15 @@ export const remarkPathPlugin = ({ pathPrefix }: { pathPrefix: string }) =>
       `unist-util-visit`
     )
 
-    visit(markdownAST, [`link`, `definition`], node => {
+    visit(markdownAST, [`link`, `definition`], (node: Node) => {
+      const typedNode = node as { url?: string }
       if (
-        node.url &&
-        typeof node.url === `string` &&
-        node.url.startsWith(`/`) &&
-        !node.url.startsWith(`//`)
+        typedNode.url &&
+        typeof typedNode.url === `string` &&
+        typedNode.url.startsWith(`/`) &&
+        !typedNode.url.startsWith(`//`)
       ) {
-        node.url = withPathPrefix(node.url, pathPrefix)
+        typedNode.url = withPathPrefix(typedNode.url, pathPrefix)
       }
     })
     return markdownAST

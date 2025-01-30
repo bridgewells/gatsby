@@ -11,6 +11,7 @@ import {
   isObjectType,
   isInterfaceType,
   isEnumType,
+  isInputObjectType,
   SelectionSetNode,
   SelectionNode,
   FieldNode,
@@ -27,18 +28,27 @@ import {
 import { IGatsbyNode } from "../redux/types"
 import { IQueryResult } from "../datastore/types"
 import { GatsbyIterable } from "../datastore/common/iterable"
-import { getResolvedFields, fieldPathNeedToResolve } from "./utils"
+import {
+  getResolvedFields,
+  fieldPathNeedToResolve,
+  INestedPathStructureNode,
+  pathObjectToPathString,
+} from "./utils"
 
 type ResolvedLink = IGatsbyNode | Array<IGatsbyNode> | null
 
 type nestedListOfStrings = Array<string | nestedListOfStrings>
 type nestedListOfNodes = Array<IGatsbyNode | nestedListOfNodes>
 
-function getMaybeResolvedValue(
+export function getMaybeResolvedValue(
   node: IGatsbyNode,
-  field: string,
+  field: string | INestedPathStructureNode,
   nodeInterfaceName: string
 ): any {
+  if (typeof field !== `string`) {
+    field = pathObjectToPathString(field).path
+  }
+
   if (
     fieldPathNeedToResolve({
       selector: field,
@@ -70,7 +80,7 @@ export function findOne<TSource, TArgs>(
   }
 }
 
-type PaginatedArgs<TArgs> = TArgs & { skip?: number; limit?: number }
+type PaginatedArgs<TArgs> = TArgs & { skip?: number; limit?: number; sort: any }
 
 export function findManyPaginated<TSource, TArgs>(
   typeName: string
@@ -127,7 +137,7 @@ export function findManyPaginated<TSource, TArgs>(
 }
 
 interface IFieldConnectionArgs {
-  field: string
+  field: string | INestedPathStructureNode
 }
 
 export function createDistinctResolver(
@@ -281,7 +291,10 @@ export function createGroupResolver(
               },
               args
             ),
-            field,
+            field:
+              typeof field === `string`
+                ? field
+                : pathObjectToPathString(field).path,
             fieldValue,
           })
           return acc
@@ -560,25 +573,52 @@ function getProjectedField(
       info
     )
 
+    if (fieldNodes.length === 0) {
+      return []
+    }
+
     const returnType = getNullableType(info.returnType)
 
     if (isObjectType(returnType) || isInterfaceType(returnType)) {
       const field = returnType.getFields()[fieldName]
       const fieldArg = field?.args?.find(arg => arg.name === `field`)
       if (fieldArg) {
-        const fieldEnum = getNullableType(fieldArg.type)
+        const fieldTC = getNullableType(fieldArg.type)
 
-        if (isEnumType(fieldEnum)) {
+        if (isEnumType(fieldTC) || isInputObjectType(fieldTC)) {
           return fieldNodes.reduce(
             (acc: Array<string>, fieldNode: FieldNode) => {
               const fieldArg = fieldNode.arguments?.find(
                 arg => arg.name.value === `field`
               )
-              if (fieldArg?.value.kind === Kind.ENUM) {
-                const enumKey = fieldArg.value.value
-                const enumValue = fieldEnum.getValue(enumKey)
-                if (enumValue) {
-                  return [...acc, enumValue.value]
+              if (isEnumType(fieldTC)) {
+                if (fieldArg?.value.kind === Kind.ENUM) {
+                  const enumKey = fieldArg.value.value
+                  const enumValue = fieldTC.getValue(enumKey)
+                  if (enumValue) {
+                    acc.push(enumValue.value)
+                  }
+                }
+              } else if (isInputObjectType(fieldTC)) {
+                const path: Array<string> = []
+                let currentValue = fieldArg?.value
+                while (currentValue) {
+                  if (currentValue.kind === Kind.OBJECT) {
+                    if (currentValue.fields.length !== 1) {
+                      throw new Error(`Invalid field arg`)
+                    }
+
+                    const fieldArg = currentValue.fields[0]
+                    path.push(fieldArg.name.value)
+                    currentValue = fieldArg.value
+                  } else {
+                    currentValue = undefined
+                  }
+                }
+
+                if (path.length > 0) {
+                  const sortPath = path.join(`.`)
+                  acc.push(sortPath)
                 }
               }
               return acc

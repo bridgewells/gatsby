@@ -12,8 +12,10 @@ import fs from "fs-extra"
 import { supportedExtensions } from "gatsby-transformer-sharp/supported-extensions"
 import replaceAll from "replaceall"
 import { usingGatsbyV4OrGreater } from "~/utils/gatsby-version"
-import { gatsbyImageResolver } from "gatsby-plugin-utils/dist/polyfill-remote-file/graphql/gatsby-image-resolver"
-import { publicUrlResolver } from "gatsby-plugin-utils/dist/polyfill-remote-file/graphql/public-url-resolver"
+import {
+  gatsbyImageResolver,
+  publicUrlResolver,
+} from "gatsby-plugin-utils/polyfill-remote-file"
 
 import { formatLogMessage } from "~/utils/format-log-message"
 
@@ -21,7 +23,7 @@ import fetchReferencedMediaItemsAndCreateNodes, {
   stripImageSizesFromUrl,
 } from "../fetch-nodes/fetch-referenced-media-items"
 import { b64e } from "~/utils/string-encoding"
-import store from "~/store"
+import { getStore } from "~/store"
 
 import { store as gatsbyStore } from "gatsby/dist/redux"
 
@@ -168,7 +170,7 @@ const fetchNodeHtmlImageMediaItemNodes = async ({
   wpUrl,
 }) => {
   // get all the image nodes we've cached from elsewhere
-  const { nodeMetaByUrl } = store.getState().imageNodes
+  const { nodeMetaByUrl } = getStore().getState().imageNodes
 
   const previouslyCachedNodesByUrl = (
     await Promise.all(
@@ -419,7 +421,7 @@ const copyFileToStaticAndReturnUrlPath = async (fileNode, helpers) => {
 const cacheCreatedFileNodeBySrc = ({ node, src }) => {
   if (node) {
     // save any fetched media items in our global media item cache
-    store.dispatch.imageNodes.pushNodeMeta({
+    getStore().dispatch.imageNodes.pushNodeMeta({
       sourceUrl: src,
       id: node.id,
       modifiedGmt: node.modifiedGmt,
@@ -625,7 +627,8 @@ export const replaceNodeHtmlImages = async ({
                   contentDigest: imageNode.modifiedGmt,
                 },
               },
-              helpers.actions
+              helpers.actions,
+              gatsbyStore
             )
           }
         } catch (e) {
@@ -667,7 +670,8 @@ export const replaceNodeHtmlImages = async ({
       ) {
         gatsbyImageHydrationData = {
           image: imageResize,
-          alt: cheerioImg?.attribs?.alt,
+          // Wordpress tells users to leave "alt" empty if image is decorative. But it returns undefined, not ``
+          alt: cheerioImg?.attribs?.alt ?? ``,
           className: `${
             cheerioImg?.attribs?.class || ``
           } inline-gatsby-image-wrapper`,
@@ -683,7 +687,8 @@ export const replaceNodeHtmlImages = async ({
           `img`,
           {
             src: publicUrl,
-            alt: cheerioImg?.attribs?.alt,
+            // Wordpress tells users to leave "alt" empty if image is decorative. But it returns undefined, not ``
+            alt: cheerioImg?.attribs?.alt ?? ``,
             className: `${
               cheerioImg?.attribs?.class || ``
             } inline-gatsby-image-wrapper`,
@@ -812,7 +817,7 @@ const replaceFileLinks = async ({
           return null
         }
 
-        const [, hostname, path] = mediaItemMatchGroup?.subMatches
+        const [, hostname, path] = mediaItemMatchGroup.subMatches
 
         cacheCreatedFileNodeBySrc({
           node: mediaItemNode,

@@ -20,13 +20,14 @@ export function Head() {
   return (
     <>
       <base data-testid="base" href={base} />
-      <title data-testid="title">{title}</title>
+      <title data-testid="title">{title} {title}</title>
       <meta data-testid="meta" name="author" content={meta} />
       <noscript data-testid="noscript">{noscript}</noscript>
       <style data-testid="style">
         {`
           h1 {
-            color: ${style};
+            color: rebeccapurple;
+            font-family: '${style}'
           }
         `}
       </style>

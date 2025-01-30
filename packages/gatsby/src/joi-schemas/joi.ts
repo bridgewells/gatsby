@@ -1,6 +1,9 @@
 import Joi from "joi"
 import { IGatsbyConfig, IGatsbyPage, IGatsbyNode } from "../redux/types"
-import { DEFAULT_TYPES_OUTPUT_PATH } from "../utils/graphql-typegen/ts-codegen"
+import {
+  DEFAULT_DOCUMENT_SEARCH_PATHS,
+  DEFAULT_TYPES_OUTPUT_PATH,
+} from "../utils/graphql-typegen/ts-codegen"
 
 const stripTrailingSlash = (chain: Joi.StringSchema): Joi.StringSchema =>
   chain.replace(/(\w)\/+$/, `$1`)
@@ -54,13 +57,16 @@ export const gatsbyConfigSchema: Joi.ObjectSchema<IGatsbyConfig> = Joi.object()
     jsxRuntime: Joi.string().valid(`automatic`, `classic`).default(`classic`),
     jsxImportSource: Joi.string(),
     trailingSlash: Joi.string()
-      .valid(`always`, `never`, `ignore`, `legacy`) // TODO(v5): Remove legacy
-      .default(`legacy`),
+      .valid(`always`, `never`, `ignore`)
+      .default(`always`),
     graphqlTypegen: Joi.alternatives(
       Joi.boolean(),
       Joi.object()
         .keys({
           typesOutputPath: Joi.string().default(DEFAULT_TYPES_OUTPUT_PATH),
+          documentSearchPaths: Joi.array()
+            .items(Joi.string())
+            .default(DEFAULT_DOCUMENT_SEARCH_PATHS),
           generateOnBuild: Joi.boolean().default(false),
         })
         .unknown(false)
@@ -70,12 +76,46 @@ export const gatsbyConfigSchema: Joi.ObjectSchema<IGatsbyConfig> = Joi.object()
         if (value === true) {
           return {
             typesOutputPath: DEFAULT_TYPES_OUTPUT_PATH,
+            documentSearchPaths: DEFAULT_DOCUMENT_SEARCH_PATHS,
             generateOnBuild: false,
           }
         }
 
         return value
       }),
+    headers: Joi.array()
+      .items(
+        Joi.object()
+          .keys({
+            source: Joi.string().required(),
+            headers: Joi.array()
+              .items(
+                Joi.object()
+                  .keys({
+                    key: Joi.string().required(),
+                    value: Joi.string().required(),
+                  })
+                  .required()
+                  .unknown(false)
+              )
+              .required(),
+          })
+          .unknown(false)
+      )
+      .default([]),
+    adapter: Joi.object()
+      .keys({
+        name: Joi.string().required(),
+        cache: Joi.object()
+          .keys({
+            restore: Joi.func(),
+            store: Joi.func(),
+          })
+          .unknown(false),
+        adapt: Joi.func().required(),
+        config: Joi.func(),
+      })
+      .unknown(false),
   })
   // throws when both assetPrefix and pathPrefix are defined
   .when(

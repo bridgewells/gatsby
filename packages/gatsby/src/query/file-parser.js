@@ -16,13 +16,14 @@ const {
   ExportIsNotAsyncError,
   isWithinConfigExport,
 } = require(`babel-plugin-remove-graphql-queries`)
+import { collectSlices } from "../utils/babel/find-slices"
 
 const report = require(`gatsby-cli/lib/reporter`)
 
 import type { DocumentNode } from "graphql"
 import { babelParseToAst } from "../utils/babel-parse-to-ast"
 import { codeFrameColumns } from "@babel/code-frame"
-import { getPathToLayoutComponent } from "gatsby-core-utils"
+import { getPathToLayoutComponent, md5 } from "gatsby-core-utils"
 
 const apiRunnerNode = require(`../utils/api-runner-node`)
 const { actions } = require(`../redux/actions`)
@@ -164,7 +165,7 @@ async function parseToAst(filePath, fileStr, { parentSpan, addError } = {}) {
         id: `85911`,
         filePath: cleanFilePath,
         context: {
-          cleanFilePath,
+          filePath: cleanFilePath,
         },
       })
 
@@ -470,6 +471,11 @@ async function findGraphQLTags(
   return uniqueQueries
 }
 
+type CollectedSlice = {
+  name: string,
+  allowEmpty: boolean,
+}
+
 const cache = {}
 
 export default class FileParser {
@@ -480,7 +486,10 @@ export default class FileParser {
   async parseFile(
     file: string,
     addError
-  ): Promise<?Array<GraphQLDocumentInFile>> {
+  ): Promise<{
+    astDefinitions: ?Array<GraphQLDocumentInFile>,
+    pageSlices: { [key: string]: CollectedSlice } | null,
+  }> {
     let text
     const cleanFilepath = getPathToLayoutComponent(file)
     try {
@@ -504,21 +513,19 @@ export default class FileParser {
     }
 
     // We do a quick check so we can exit early if this is a file we're not interested in.
-    // We only process files that either include graphql, or static images
+    // We only process files that include the APIs below
     if (
       !text.includes(`graphql`) &&
       !text.includes(`gatsby-plugin-image`) &&
       !text.includes(`getServerData`) &&
-      !text.includes(`config`)
+      !text.includes(`config`) &&
+      !text.includes(`Slice`) &&
+      !text.includes(`Head`)
     ) {
       return null
     }
 
-    const hash = crypto
-      .createHash(`md5`)
-      .update(file)
-      .update(text)
-      .digest(`hex`)
+    const hash = await md5(file + text)
 
     try {
       if (!cache[hash]) {
@@ -526,6 +533,7 @@ export default class FileParser {
           parentSpan: this.parentSpan,
           addError,
         })
+
         cache[hash] = {
           astDefinitions: await findGraphQLTags(file, ast, {
             parentSpan: this.parentSpan,
@@ -534,9 +542,11 @@ export default class FileParser {
           serverData: findApiExport(ast, `getServerData`),
           config: findApiExport(ast, `config`),
           Head: findApiExport(ast, `Head`),
+          pageSlices: collectSlices(ast, file),
         }
       }
-      const { astDefinitions, serverData, config, Head } = cache[hash]
+      const { astDefinitions, serverData, config, Head, pageSlices } =
+        cache[hash]
 
       // Note: we should dispatch this action even when getServerData is not found
       // (maybe it was set before, so now we need to reset renderMode from SSR to the default one)
@@ -561,7 +571,7 @@ export default class FileParser {
         )
       }
 
-      return astDefinitions
+      return { astDefinitions, pageSlices }
     } catch (err) {
       // default error
       let structuredError = {
@@ -661,13 +671,27 @@ export default class FileParser {
     addError
   ): Promise<Array<GraphQLDocumentInFile>> {
     const documents = []
+    const pageSliceUsage = new Map()
 
     return Promise.all(
       files.map(file =>
-        this.parseFile(file, addError).then(docs => {
-          documents.push(...(docs || []))
+        this.parseFile(file, addError).then(results => {
+          if (results) {
+            const { astDefinitions, pageSlices } = results
+            documents.push(...(astDefinitions || []))
+            if (pageSlices) {
+              pageSliceUsage.set(file, pageSlices)
+            }
+          }
         })
       )
-    ).then(() => documents)
+    ).then(() => {
+      store.dispatch({
+        type: `SET_COMPONENTS_USING_PAGE_SLICES`,
+        payload: pageSliceUsage,
+      })
+
+      return documents
+    })
   }
 }
